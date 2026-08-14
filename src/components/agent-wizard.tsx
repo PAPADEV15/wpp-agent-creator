@@ -21,18 +21,26 @@ import {
   buildBusinessYaml,
   buildEnv,
   buildPromptsYaml,
-  defaultConfig,
   download,
   GOALS,
   TONES,
-  type AgentConfig,
 } from "@/lib/agent-config";
+import {
+  createDraftAgent,
+  updateAgentConfig,
+  validateStep,
+  type Agent,
+  type AgentConfig,
+  type AgentConfigStep,
+  type AgentTone,
+  type WhatsAppProvider,
+} from "@/domain/agent";
 
-const STEPS = [
-  { id: 0, label: "Negócio", icon: Building2 },
-  { id: 1, label: "Agente", icon: Bot },
-  { id: 2, label: "Conhecimento", icon: BookOpen },
-  { id: 3, label: "Conexão", icon: Plug },
+const STEPS: { id: number; label: string; icon: typeof Building2; section?: AgentConfigStep }[] = [
+  { id: 0, label: "Negócio", icon: Building2, section: "business" },
+  { id: 1, label: "Agente", icon: Bot, section: "persona" },
+  { id: 2, label: "Conhecimento", icon: BookOpen, section: "knowledge" },
+  { id: 3, label: "Conexão", icon: Plug, section: "whatsapp" },
   { id: 4, label: "Gerar", icon: Check },
 ];
 
@@ -88,9 +96,20 @@ function FileBlock({ name, content }: { name: string; content: string }) {
 
 export function AgentWizard() {
   const [step, setStep] = useState(0);
-  const [c, setC] = useState<AgentConfig>(defaultConfig);
-  const set = <K extends keyof AgentConfig>(k: K, v: AgentConfig[K]) =>
-    setC((prev) => ({ ...prev, [k]: v }));
+  const [agent, setAgent] = useState<Agent>(() =>
+    createDraftAgent(crypto.randomUUID(), new Date().toISOString()),
+  );
+  const c: AgentConfig = agent.config;
+
+  const set = <K extends keyof AgentConfig>(
+    section: K,
+    patch: Partial<AgentConfig[K]>,
+  ) =>
+    setAgent((prev) => ({
+      ...prev,
+      config: updateAgentConfig(prev.config, section, patch),
+      updatedAt: new Date().toISOString(),
+    }));
 
   const files = useMemo(
     () => ({
@@ -101,14 +120,15 @@ export function AgentWizard() {
     [c],
   );
 
-  const canAdvance = () => {
-    if (step === 0) return c.businessName.trim() && c.businessDescription.trim();
-    if (step === 1) return c.agentName.trim() && c.goals.length > 0;
-    if (step === 3)
-      return c.provider === "meta"
-        ? c.metaToken && c.metaPhoneId
-        : c.twilioSid && c.twilioToken && c.twilioPhone;
-    return true;
+  const section = STEPS[step]?.section;
+  const validation = section ? validateStep(c, section) : ({ ok: true } as const);
+
+  const goNext = () => {
+    if (!validation.ok) {
+      toast.error(validation.message);
+      return;
+    }
+    setStep((s) => s + 1);
   };
 
   return (
@@ -155,8 +175,8 @@ export function AgentWizard() {
               <Field label="Nome do negócio" htmlFor="bn">
                 <Input
                   id="bn"
-                  value={c.businessName}
-                  onChange={(e) => set("businessName", e.target.value)}
+                  value={c.business.name}
+                  onChange={(e) => set("business", { name: e.target.value })}
                   placeholder="Ex: Cafeteria Bom Sabor"
                 />
               </Field>
@@ -168,8 +188,8 @@ export function AgentWizard() {
                 <Textarea
                   id="bd"
                   rows={4}
-                  value={c.businessDescription}
-                  onChange={(e) => set("businessDescription", e.target.value)}
+                  value={c.business.description}
+                  onChange={(e) => set("business", { description: e.target.value })}
                   placeholder="Vendemos cafés especiais e doces artesanais para..."
                 />
               </Field>
@@ -177,15 +197,15 @@ export function AgentWizard() {
                 <Field label="Horário de atendimento" htmlFor="hr">
                   <Input
                     id="hr"
-                    value={c.hours}
-                    onChange={(e) => set("hours", e.target.value)}
+                    value={c.business.hours}
+                    onChange={(e) => set("business", { hours: e.target.value })}
                   />
                 </Field>
                 <Field label="Idioma das respostas" htmlFor="lg">
                   <Input
                     id="lg"
-                    value={c.language}
-                    onChange={(e) => set("language", e.target.value)}
+                    value={c.business.language}
+                    onChange={(e) => set("business", { language: e.target.value })}
                   />
                 </Field>
               </div>
@@ -202,8 +222,8 @@ export function AgentWizard() {
               >
                 <Input
                   id="an"
-                  value={c.agentName}
-                  onChange={(e) => set("agentName", e.target.value)}
+                  value={c.persona.name}
+                  onChange={(e) => set("persona", { name: e.target.value })}
                   placeholder="Ex: Sofia"
                 />
               </Field>
@@ -215,10 +235,10 @@ export function AgentWizard() {
                     <button
                       key={t.id}
                       type="button"
-                      onClick={() => set("tone", t.id)}
+                      onClick={() => set("persona", { tone: t.id as AgentTone })}
                       className={cn(
                         "rounded-xl border p-3 text-left transition-colors",
-                        c.tone === t.id
+                        c.persona.tone === t.id
                           ? "border-primary bg-primary/10"
                           : "border-border bg-secondary/30 hover:border-primary/40",
                       )}
@@ -236,16 +256,17 @@ export function AgentWizard() {
                 </Label>
                 <div className="flex flex-wrap gap-2">
                   {GOALS.map((g) => {
-                    const on = c.goals.includes(g);
+                    const on = c.persona.goals.includes(g);
                     return (
                       <button
                         key={g}
                         type="button"
                         onClick={() =>
-                          set(
-                            "goals",
-                            on ? c.goals.filter((x) => x !== g) : [...c.goals, g],
-                          )
+                          set("persona", {
+                            goals: on
+                              ? c.persona.goals.filter((x) => x !== g)
+                              : [...c.persona.goals, g],
+                          })
                         }
                         className={cn(
                           "rounded-full border px-3.5 py-1.5 text-xs font-medium transition-colors",
@@ -274,19 +295,16 @@ export function AgentWizard() {
                 <Textarea
                   id="kb"
                   rows={10}
-                  value={c.knowledge}
-                  onChange={(e) => set("knowledge", e.target.value)}
+                  value={c.knowledge.content}
+                  onChange={(e) => set("knowledge", { content: e.target.value })}
                   placeholder={"Café americano — R$ 12\nEntrega em até 40 min\nEndereço: ..."}
                 />
               </Field>
-              <Field
-                label="Resposta quando não souber"
-                htmlFor="fb"
-              >
+              <Field label="Resposta quando não souber" htmlFor="fb">
                 <Input
                   id="fb"
-                  value={c.fallback}
-                  onChange={(e) => set("fallback", e.target.value)}
+                  value={c.knowledge.fallback}
+                  onChange={(e) => set("knowledge", { fallback: e.target.value })}
                 />
               </Field>
             </div>
@@ -296,16 +314,16 @@ export function AgentWizard() {
             <div className="space-y-6">
               <h2 className="text-xl font-semibold">Conexão com o WhatsApp</h2>
               <Field
-                label="Chave da API Anthropic"
+                label="Chave da API do provedor de IA"
                 hint="Fica apenas no seu navegador e no arquivo .env que você baixar."
                 htmlFor="ak"
               >
                 <Input
                   id="ak"
                   type="password"
-                  value={c.anthropicKey}
-                  onChange={(e) => set("anthropicKey", e.target.value)}
-                  placeholder="sk-ant-..."
+                  value={c.credentials.aiApiKey}
+                  onChange={(e) => set("credentials", { aiApiKey: e.target.value })}
+                  placeholder="Cole a chave do provedor"
                 />
               </Field>
 
@@ -319,10 +337,12 @@ export function AgentWizard() {
                     <button
                       key={p.id}
                       type="button"
-                      onClick={() => set("provider", p.id as AgentConfig["provider"])}
+                      onClick={() =>
+                        set("whatsapp", { provider: p.id as WhatsAppProvider })
+                      }
                       className={cn(
                         "rounded-xl border p-3 text-left transition-colors",
-                        c.provider === p.id
+                        c.whatsapp.provider === p.id
                           ? "border-primary bg-primary/10"
                           : "border-border bg-secondary/30 hover:border-primary/40",
                       )}
@@ -334,13 +354,17 @@ export function AgentWizard() {
                 </div>
               </div>
 
-              {c.provider === "twilio" ? (
+              {c.whatsapp.provider === "twilio" ? (
                 <div className="grid gap-6 sm:grid-cols-2">
                   <Field label="Account SID" htmlFor="ts">
                     <Input
                       id="ts"
-                      value={c.twilioSid}
-                      onChange={(e) => set("twilioSid", e.target.value)}
+                      value={c.whatsapp.twilio.accountSid}
+                      onChange={(e) =>
+                        set("whatsapp", {
+                          twilio: { ...c.whatsapp.twilio, accountSid: e.target.value },
+                        })
+                      }
                       placeholder="AC..."
                     />
                   </Field>
@@ -348,15 +372,23 @@ export function AgentWizard() {
                     <Input
                       id="tt"
                       type="password"
-                      value={c.twilioToken}
-                      onChange={(e) => set("twilioToken", e.target.value)}
+                      value={c.whatsapp.twilio.authToken}
+                      onChange={(e) =>
+                        set("whatsapp", {
+                          twilio: { ...c.whatsapp.twilio, authToken: e.target.value },
+                        })
+                      }
                     />
                   </Field>
                   <Field label="Número do WhatsApp" htmlFor="tp">
                     <Input
                       id="tp"
-                      value={c.twilioPhone}
-                      onChange={(e) => set("twilioPhone", e.target.value)}
+                      value={c.whatsapp.twilio.phoneNumber}
+                      onChange={(e) =>
+                        set("whatsapp", {
+                          twilio: { ...c.whatsapp.twilio, phoneNumber: e.target.value },
+                        })
+                      }
                       placeholder="+5511999999999"
                     />
                   </Field>
@@ -367,22 +399,34 @@ export function AgentWizard() {
                     <Input
                       id="mt"
                       type="password"
-                      value={c.metaToken}
-                      onChange={(e) => set("metaToken", e.target.value)}
+                      value={c.whatsapp.meta.accessToken}
+                      onChange={(e) =>
+                        set("whatsapp", {
+                          meta: { ...c.whatsapp.meta, accessToken: e.target.value },
+                        })
+                      }
                     />
                   </Field>
                   <Field label="Phone Number ID" htmlFor="mp">
                     <Input
                       id="mp"
-                      value={c.metaPhoneId}
-                      onChange={(e) => set("metaPhoneId", e.target.value)}
+                      value={c.whatsapp.meta.phoneNumberId}
+                      onChange={(e) =>
+                        set("whatsapp", {
+                          meta: { ...c.whatsapp.meta, phoneNumberId: e.target.value },
+                        })
+                      }
                     />
                   </Field>
                   <Field label="Verify Token" htmlFor="mv">
                     <Input
                       id="mv"
-                      value={c.metaVerifyToken}
-                      onChange={(e) => set("metaVerifyToken", e.target.value)}
+                      value={c.whatsapp.meta.verifyToken}
+                      onChange={(e) =>
+                        set("whatsapp", {
+                          meta: { ...c.whatsapp.meta, verifyToken: e.target.value },
+                        })
+                      }
                     />
                   </Field>
                 </div>
@@ -425,12 +469,14 @@ export function AgentWizard() {
               <ArrowLeft className="size-4" /> Voltar
             </Button>
             {step < STEPS.length - 1 && (
-              <Button
-                onClick={() => canAdvance() && setStep((s) => s + 1)}
-                disabled={!canAdvance()}
-              >
-                Continuar <ArrowRight className="size-4" />
-              </Button>
+              <div className="flex items-center gap-3">
+                {!validation.ok && (
+                  <p className="text-xs text-muted-foreground">{validation.message}</p>
+                )}
+                <Button onClick={goNext} disabled={!validation.ok}>
+                  Continuar <ArrowRight className="size-4" />
+                </Button>
+              </div>
             )}
           </div>
         </div>
@@ -447,9 +493,9 @@ export function AgentWizard() {
               <MessageCircle className="size-4" />
             </div>
             <div>
-              <p className="text-sm font-medium">{c.agentName || "Seu agente"}</p>
+              <p className="text-sm font-medium">{c.persona.name || "Seu agente"}</p>
               <p className="text-xs text-muted-foreground">
-                {c.businessName || "Seu negócio"}
+                {c.business.name || "Seu negócio"}
               </p>
             </div>
           </div>
@@ -461,8 +507,8 @@ export function AgentWizard() {
               className="ml-auto max-w-[90%] rounded-2xl rounded-tr-sm px-3.5 py-2 text-primary-foreground"
               style={{ background: "var(--gradient-primary)" }}
             >
-              Oi! Aqui é {c.agentName || "o assistente"} d{"a "}
-              {c.businessName || "nossa loja"}. Nosso horário é {c.hours}.
+              Oi! Aqui é {c.persona.name || "o assistente"} d{"a "}
+              {c.business.name || "nossa loja"}. Nosso horário é {c.business.hours}.
             </div>
             <div className="max-w-[85%] rounded-2xl rounded-tl-sm bg-secondary px-3.5 py-2 text-secondary-foreground">
               E quanto custa o combo?
@@ -471,9 +517,9 @@ export function AgentWizard() {
               className="ml-auto max-w-[90%] rounded-2xl rounded-tr-sm px-3.5 py-2 text-primary-foreground"
               style={{ background: "var(--gradient-primary)" }}
             >
-              {c.knowledge.trim()
-                ? c.knowledge.trim().split("\n")[0]
-                : c.fallback}
+              {c.knowledge.content.trim()
+                ? c.knowledge.content.trim().split("\n")[0]
+                : c.knowledge.fallback}
             </div>
           </div>
           <p className="mt-4 text-xs text-muted-foreground">
