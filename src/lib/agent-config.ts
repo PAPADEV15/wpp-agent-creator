@@ -1,105 +1,67 @@
-export type Provider = "meta" | "twilio";
+/**
+ * Serialização da configuração de domínio para os arquivos do projeto.
+ * Camada de adaptação: recebe AgentConfig e devolve texto.
+ */
+import {
+  AGENT_GOALS,
+  AGENT_TONES,
+  type AgentConfig,
+} from "@/domain/agent";
 
-export type AgentConfig = {
-  businessName: string;
-  businessDescription: string;
-  goals: string[];
-  agentName: string;
-  tone: string;
-  hours: string;
-  language: string;
-  knowledge: string;
-  fallback: string;
-  anthropicKey: string;
-  provider: Provider;
-  metaToken: string;
-  metaPhoneId: string;
-  metaVerifyToken: string;
-  twilioSid: string;
-  twilioToken: string;
-  twilioPhone: string;
-};
-
-export const defaultConfig: AgentConfig = {
-  businessName: "",
-  businessDescription: "",
-  goals: [],
-  agentName: "",
-  tone: "amigavel",
-  hours: "Segunda a sexta, 9h às 18h",
-  language: "Português (Brasil)",
-  knowledge: "",
-  fallback:
-    "Não tenho essa informação agora, vou te conectar com alguém do time.",
-  anthropicKey: "",
-  provider: "twilio",
-  metaToken: "",
-  metaPhoneId: "",
-  metaVerifyToken: "agentkit-verify",
-  twilioSid: "",
-  twilioToken: "",
-  twilioPhone: "",
-};
-
-export const GOALS = [
-  "Responder perguntas frequentes",
-  "Agendar horários ou reservas",
-  "Qualificar leads e vender",
-  "Receber pedidos",
-  "Suporte pós-venda",
-];
-
-export const TONES = [
-  { id: "profissional", label: "Profissional", hint: "Formal e objetivo" },
-  { id: "amigavel", label: "Amigável", hint: "Próximo e casual" },
-  { id: "vendedor", label: "Vendedor", hint: "Persuasivo e ativo" },
-  { id: "empatico", label: "Empático", hint: "Acolhedor e calmo" },
-];
+export const GOALS = AGENT_GOALS;
+export const TONES = AGENT_TONES;
 
 const q = (s: string) => JSON.stringify(s || "");
+
+const goalsOf = (c: AgentConfig) =>
+  c.persona.goals.length ? c.persona.goals : ["Responder perguntas frequentes"];
 
 export function buildBusinessYaml(c: AgentConfig) {
   return `# config/business.yaml — gerado pelo AgentKit
 negocio:
-  nombre: ${q(c.businessName)}
-  descripcion: ${q(c.businessDescription)}
-  horario: ${q(c.hours)}
-  idioma: ${q(c.language)}
+  nombre: ${q(c.business.name)}
+  descripcion: ${q(c.business.description)}
+  horario: ${q(c.business.hours)}
+  idioma: ${q(c.business.language)}
 
 agente:
-  nombre: ${q(c.agentName)}
-  tono: ${q(c.tone)}
+  nombre: ${q(c.persona.name)}
+  tono: ${q(c.persona.tone)}
   objetivos:
-${(c.goals.length ? c.goals : ["Responder perguntas frequentes"]).map((g) => `    - ${q(g)}`).join("\n")}
-  fallback: ${q(c.fallback)}
+${goalsOf(c)
+  .map((g) => `    - ${q(g)}`)
+  .join("\n")}
+  fallback: ${q(c.knowledge.fallback)}
 `;
 }
 
 export function buildPromptsYaml(c: AgentConfig) {
-  const tone = TONES.find((t) => t.id === c.tone)?.label ?? c.tone;
-  const prompt = `Você é ${c.agentName || "o assistente"}, atendente virtual de ${c.businessName || "o negócio"} no WhatsApp.
+  const tone = TONES.find((t) => t.id === c.persona.tone)?.label ?? c.persona.tone;
+  const prompt = `Você é ${c.persona.name || "o assistente"}, atendente virtual de ${c.business.name || "o negócio"} no WhatsApp.
 
 SOBRE O NEGÓCIO
-${c.businessDescription || "-"}
+${c.business.description || "-"}
 
 HORÁRIO DE ATENDIMENTO
-${c.hours}
+${c.business.hours}
 
 SEUS OBJETIVOS
-${(c.goals.length ? c.goals : ["Responder perguntas frequentes"]).map((g) => `- ${g}`).join("\n")}
+${goalsOf(c)
+  .map((g) => `- ${g}`)
+  .join("\n")}
 
 COMO FALAR
 - Tom: ${tone}
-- Idioma: ${c.language}
+- Idioma: ${c.business.language}
 - Mensagens curtas, próprias para WhatsApp. Sem markdown pesado.
 - Uma pergunta por vez.
 
 REGRAS
 - Nunca invente informação. Use apenas o conhecimento abaixo.
-- Se não souber, responda: "${c.fallback}"
+- Se não souber, responda: "${c.knowledge.fallback}"
 
 BASE DE CONHECIMENTO
-${c.knowledge || "(adicione informações na pasta /knowledge)"}`;
+${c.knowledge.content || "(adicione informações na pasta /knowledge)"}`;
 
   return `# config/prompts.yaml — gerado pelo AgentKit
 system_prompt: |
@@ -112,20 +74,20 @@ ${prompt
 
 export function buildEnv(c: AgentConfig) {
   const lines = [
-    `ANTHROPIC_API_KEY=${c.anthropicKey}`,
-    `WHATSAPP_PROVIDER=${c.provider}`,
+    `AI_API_KEY=${c.credentials.aiApiKey}`,
+    `WHATSAPP_PROVIDER=${c.whatsapp.provider}`,
   ];
-  if (c.provider === "meta") {
+  if (c.whatsapp.provider === "meta") {
     lines.push(
-      `META_ACCESS_TOKEN=${c.metaToken}`,
-      `META_PHONE_NUMBER_ID=${c.metaPhoneId}`,
-      `META_VERIFY_TOKEN=${c.metaVerifyToken}`,
+      `META_ACCESS_TOKEN=${c.whatsapp.meta.accessToken}`,
+      `META_PHONE_NUMBER_ID=${c.whatsapp.meta.phoneNumberId}`,
+      `META_VERIFY_TOKEN=${c.whatsapp.meta.verifyToken}`,
     );
   } else {
     lines.push(
-      `TWILIO_ACCOUNT_SID=${c.twilioSid}`,
-      `TWILIO_AUTH_TOKEN=${c.twilioToken}`,
-      `TWILIO_PHONE_NUMBER=${c.twilioPhone}`,
+      `TWILIO_ACCOUNT_SID=${c.whatsapp.twilio.accountSid}`,
+      `TWILIO_AUTH_TOKEN=${c.whatsapp.twilio.authToken}`,
+      `TWILIO_PHONE_NUMBER=${c.whatsapp.twilio.phoneNumber}`,
     );
   }
   lines.push(
