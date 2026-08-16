@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   ArrowLeft,
   ArrowRight,
@@ -25,6 +25,8 @@ import {
   GOALS,
   TONES,
 } from "@/lib/agent-config";
+import { AI_PROVIDERS, DEFAULT_AI_MODEL } from "@/domain/ai";
+import { getAIProviderStatus } from "@/lib/ai.functions";
 import {
   createDraftAgent,
   updateAgentConfig,
@@ -119,6 +121,21 @@ export function AgentWizard() {
     }),
     [c],
   );
+
+  const [aiStatus, setAiStatus] = useState<"loading" | "configured" | "missing">("loading");
+  useEffect(() => {
+    let active = true;
+    getAIProviderStatus()
+      .then((list) => {
+        if (!active) return;
+        const entry = list.find((s) => s.provider === c.ai.provider);
+        setAiStatus(entry?.configured ? "configured" : "missing");
+      })
+      .catch(() => active && setAiStatus("missing"));
+    return () => {
+      active = false;
+    };
+  }, [c.ai.provider]);
 
   const section = STEPS[step]?.section;
   const baseValidation = section ? validateStep(c, section) : ({ ok: true } as const);
