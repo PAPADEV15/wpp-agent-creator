@@ -9,7 +9,7 @@ import {
   Check,
   Copy,
   Download,
-  MessageCircle,
+  
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -27,6 +27,7 @@ import {
 } from "@/lib/agent-config";
 import { AI_PROVIDERS, DEFAULT_AI_MODEL } from "@/domain/ai";
 import { getAIProviderStatus } from "@/lib/ai.functions";
+import { AgentTestChat } from "@/components/agent-test-chat";
 import {
   createDraftAgent,
   updateAgentConfig,
@@ -519,50 +520,9 @@ export function AgentWizard() {
         </div>
       </div>
 
-      {/* Preview */}
+      {/* Chat de teste real */}
       <aside className="lg:sticky lg:top-8 lg:self-start">
-        <div
-          className="rounded-2xl border border-border bg-card p-5"
-          style={{ boxShadow: "var(--shadow-card)" }}
-        >
-          <div className="mb-4 flex items-center gap-3">
-            <div className="flex size-9 items-center justify-center rounded-full bg-primary/15 text-primary">
-              <MessageCircle className="size-4" />
-            </div>
-            <div>
-              <p className="text-sm font-medium">{c.persona.name || "Seu agente"}</p>
-              <p className="text-xs text-muted-foreground">
-                {c.business.name || "Seu negócio"}
-              </p>
-            </div>
-          </div>
-          <div className="space-y-2.5 text-sm">
-            <div className="max-w-[85%] rounded-2xl rounded-tl-sm bg-secondary px-3.5 py-2 text-secondary-foreground">
-              Olá! Vocês atendem que horas?
-            </div>
-            <div
-              className="ml-auto max-w-[90%] rounded-2xl rounded-tr-sm px-3.5 py-2 text-primary-foreground"
-              style={{ background: "var(--gradient-primary)" }}
-            >
-              Oi! Aqui é {c.persona.name || "o assistente"} d{"a "}
-              {c.business.name || "nossa loja"}. Nosso horário é {c.business.hours}.
-            </div>
-            <div className="max-w-[85%] rounded-2xl rounded-tl-sm bg-secondary px-3.5 py-2 text-secondary-foreground">
-              E quanto custa o combo?
-            </div>
-            <div
-              className="ml-auto max-w-[90%] rounded-2xl rounded-tr-sm px-3.5 py-2 text-primary-foreground"
-              style={{ background: "var(--gradient-primary)" }}
-            >
-              {c.knowledge.content.trim()
-                ? c.knowledge.content.trim().split("\n")[0]
-                : c.knowledge.fallback}
-            </div>
-          </div>
-          <p className="mt-4 text-xs text-muted-foreground">
-            Pré-visualização ilustrativa do tom e das informações configuradas.
-          </p>
-        </div>
+        <AgentTestChat agentId={agent.id} config={c} />
       </aside>
     </div>
   );
