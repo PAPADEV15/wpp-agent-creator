@@ -315,22 +315,40 @@ export function AgentWizard() {
           {step === 3 && (
             <div className="space-y-6">
               <h2 className="text-xl font-semibold">Conexão com o WhatsApp</h2>
-              <Field
-                label="Chave da API do provedor de IA"
-                hint="Fica apenas no seu navegador e no arquivo .env que você baixar."
-                htmlFor="ak"
-              >
-                <Input
-                  id="ak"
-                  type="password"
-                  value={c.credentials.aiApiKey}
-                  onChange={(e) => set("credentials", { aiApiKey: e.target.value })}
-                  placeholder="Cole a chave do provedor"
-                />
-              </Field>
 
               <div className="space-y-3">
-                <Label className="text-sm font-medium">Provedor</Label>
+                <Label className="text-sm font-medium">Provedor de IA</Label>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  {AI_PROVIDERS.map((p) => (
+                    <button
+                      key={p.id}
+                      type="button"
+                      onClick={() =>
+                        set("ai", { provider: p.id, model: DEFAULT_AI_MODEL[p.id] })
+                      }
+                      className={cn(
+                        "rounded-xl border p-3 text-left transition-colors",
+                        c.ai.provider === p.id
+                          ? "border-primary bg-primary/10"
+                          : "border-border bg-secondary/30 hover:border-primary/40",
+                      )}
+                    >
+                      <p className="text-sm font-medium">{p.label}</p>
+                      <p className="text-xs text-muted-foreground">{p.hint}</p>
+                    </button>
+                  ))}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  {aiStatus === "configured"
+                    ? "Chave do provedor configurada com segurança no servidor."
+                    : aiStatus === "missing"
+                      ? "A chave do provedor ainda não está configurada no servidor (GEMINI_API_KEY). Você pode seguir com a configuração do agente."
+                      : "Verificando a configuração do provedor…"}
+                </p>
+              </div>
+
+              <div className="space-y-3">
+                <Label className="text-sm font-medium">Provedor do WhatsApp</Label>
                 <div className="grid gap-3 sm:grid-cols-2">
                   {[
                     { id: "twilio", t: "Twilio", d: "Sandbox grátis, ideal para testar" },
