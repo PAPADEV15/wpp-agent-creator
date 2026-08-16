@@ -32,6 +32,10 @@ ${goalsOf(c)
   .map((g) => `    - ${q(g)}`)
   .join("\n")}
   fallback: ${q(c.knowledge.fallback)}
+
+ia:
+  provider: ${q(c.ai.provider)}
+  model: ${q(c.ai.model)}
 `;
 }
 
