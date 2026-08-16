@@ -8,6 +8,7 @@ import {
   runAgentInputSchema,
   type RunAgentInput,
   type RunAgentResult,
+  type RuntimeErrorCode,
 } from "@/domain/runtime";
 import { createAIProvider, isAIProviderConfigured } from "@/lib/ai/index.server";
 import { loadAgentConfig } from "./agent-source.server";
@@ -15,7 +16,7 @@ import { buildConversation, buildSystemPrompt } from "./prompt-builder";
 
 const TIMEOUT_MS = 45_000;
 
-const AI_ERROR_MAP: Record<AIErrorCode, Parameters<typeof AgentRuntimeError>[0] extends never ? never : ConstructorParameters<typeof AgentRuntimeError>[0]> = {
+const AI_ERROR_MAP: Record<AIErrorCode, RuntimeErrorCode> = {
   missing_api_key: "AI_PROVIDER_NOT_CONFIGURED",
   invalid_provider: "UNSUPPORTED_AI_PROVIDER",
   invalid_model: "INVALID_AGENT_CONFIG",
