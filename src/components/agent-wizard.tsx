@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   ArrowLeft,
   ArrowRight,
@@ -25,6 +25,8 @@ import {
   GOALS,
   TONES,
 } from "@/lib/agent-config";
+import { AI_PROVIDERS, DEFAULT_AI_MODEL } from "@/domain/ai";
+import { getAIProviderStatus } from "@/lib/ai.functions";
 import {
   createDraftAgent,
   updateAgentConfig,
@@ -120,8 +122,25 @@ export function AgentWizard() {
     [c],
   );
 
+  const [aiStatus, setAiStatus] = useState<"loading" | "configured" | "missing">("loading");
+  useEffect(() => {
+    let active = true;
+    getAIProviderStatus()
+      .then((list) => {
+        if (!active) return;
+        const entry = list.find((s) => s.provider === c.ai.provider);
+        setAiStatus(entry?.configured ? "configured" : "missing");
+      })
+      .catch(() => active && setAiStatus("missing"));
+    return () => {
+      active = false;
+    };
+  }, [c.ai.provider]);
+
   const section = STEPS[step]?.section;
-  const validation = section ? validateStep(c, section) : ({ ok: true } as const);
+  const baseValidation = section ? validateStep(c, section) : ({ ok: true } as const);
+  const validation =
+    baseValidation.ok && section === "whatsapp" ? validateStep(c, "ai") : baseValidation;
 
   const goNext = () => {
     if (!validation.ok) {
@@ -313,22 +332,40 @@ export function AgentWizard() {
           {step === 3 && (
             <div className="space-y-6">
               <h2 className="text-xl font-semibold">Conexão com o WhatsApp</h2>
-              <Field
-                label="Chave da API do provedor de IA"
-                hint="Fica apenas no seu navegador e no arquivo .env que você baixar."
-                htmlFor="ak"
-              >
-                <Input
-                  id="ak"
-                  type="password"
-                  value={c.credentials.aiApiKey}
-                  onChange={(e) => set("credentials", { aiApiKey: e.target.value })}
-                  placeholder="Cole a chave do provedor"
-                />
-              </Field>
 
               <div className="space-y-3">
-                <Label className="text-sm font-medium">Provedor</Label>
+                <Label className="text-sm font-medium">Provedor de IA</Label>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  {AI_PROVIDERS.map((p) => (
+                    <button
+                      key={p.id}
+                      type="button"
+                      onClick={() =>
+                        set("ai", { provider: p.id, model: DEFAULT_AI_MODEL[p.id] })
+                      }
+                      className={cn(
+                        "rounded-xl border p-3 text-left transition-colors",
+                        c.ai.provider === p.id
+                          ? "border-primary bg-primary/10"
+                          : "border-border bg-secondary/30 hover:border-primary/40",
+                      )}
+                    >
+                      <p className="text-sm font-medium">{p.label}</p>
+                      <p className="text-xs text-muted-foreground">{p.hint}</p>
+                    </button>
+                  ))}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  {aiStatus === "configured"
+                    ? "Chave do provedor configurada com segurança no servidor."
+                    : aiStatus === "missing"
+                      ? "A chave do provedor ainda não está configurada no servidor (GEMINI_API_KEY). Você pode seguir com a configuração do agente."
+                      : "Verificando a configuração do provedor…"}
+                </p>
+              </div>
+
+              <div className="space-y-3">
+                <Label className="text-sm font-medium">Provedor do WhatsApp</Label>
                 <div className="grid gap-3 sm:grid-cols-2">
                   {[
                     { id: "twilio", t: "Twilio", d: "Sandbox grátis, ideal para testar" },

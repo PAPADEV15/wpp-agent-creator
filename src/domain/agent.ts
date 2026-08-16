@@ -1,9 +1,11 @@
 /**
  * Domínio do agente — independente de UI, runtime e provedores.
  * Somente o modelo de configuração desta fase: Agent, AgentConfig,
- * Knowledge, WhatsAppChannel e Credentials.
+ * Knowledge, WhatsAppChannel e configuração de IA (sem segredos).
  */
 import { z } from "zod";
+
+import { aiConfigSchema, defaultAIConfig } from "./ai";
 
 export const WHATSAPP_PROVIDERS = ["twilio", "meta"] as const;
 export type WhatsAppProvider = (typeof WHATSAPP_PROVIDERS)[number];
@@ -56,17 +58,12 @@ export const whatsappChannelSchema = z.object({
   }),
 });
 
-/** Credenciais fornecidas pelo usuário. Nunca persistidas pela UI. */
-export const credentialsSchema = z.object({
-  aiApiKey: z.string(),
-});
-
 export const agentConfigSchema = z.object({
   business: businessProfileSchema,
   persona: agentPersonaSchema,
   knowledge: knowledgeSchema,
   whatsapp: whatsappChannelSchema,
-  credentials: credentialsSchema,
+  ai: aiConfigSchema,
 });
 
 export const AGENT_STATUSES = ["draft", "published"] as const;
@@ -84,7 +81,6 @@ export type BusinessProfile = z.infer<typeof businessProfileSchema>;
 export type AgentPersona = z.infer<typeof agentPersonaSchema>;
 export type Knowledge = z.infer<typeof knowledgeSchema>;
 export type WhatsAppChannel = z.infer<typeof whatsappChannelSchema>;
-export type Credentials = z.infer<typeof credentialsSchema>;
 export type AgentConfig = z.infer<typeof agentConfigSchema>;
 export type Agent = z.infer<typeof agentSchema>;
 
@@ -106,7 +102,7 @@ export const emptyAgentConfig: AgentConfig = {
     meta: { accessToken: "", phoneNumberId: "", verifyToken: "agentkit-verify" },
     twilio: { accountSid: "", authToken: "", phoneNumber: "" },
   },
-  credentials: { aiApiKey: "" },
+  ai: defaultAIConfig,
 };
 
 /** Cria um agente em rascunho, sem persistência (fase de configuração). */
@@ -129,7 +125,7 @@ export function updateAgentConfig<K extends keyof AgentConfig>(
   return { ...config, [section]: { ...config[section], ...patch } };
 }
 
-export type AgentConfigStep = "business" | "persona" | "knowledge" | "whatsapp";
+export type AgentConfigStep = "business" | "persona" | "knowledge" | "whatsapp" | "ai";
 
 /** Valida apenas a seção relevante para cada etapa do wizard. */
 export function validateStep(
@@ -141,6 +137,7 @@ export function validateStep(
     persona: agentPersonaSchema,
     knowledge: knowledgeSchema,
     whatsapp: whatsappChannelSchema,
+    ai: aiConfigSchema,
   } as const;
 
   const result = schemas[step].safeParse(config[step]);
