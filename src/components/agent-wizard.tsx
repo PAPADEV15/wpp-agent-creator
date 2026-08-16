@@ -121,7 +121,9 @@ export function AgentWizard() {
   );
 
   const section = STEPS[step]?.section;
-  const validation = section ? validateStep(c, section) : ({ ok: true } as const);
+  const baseValidation = section ? validateStep(c, section) : ({ ok: true } as const);
+  const validation =
+    baseValidation.ok && section === "whatsapp" ? validateStep(c, "ai") : baseValidation;
 
   const goNext = () => {
     if (!validation.ok) {
