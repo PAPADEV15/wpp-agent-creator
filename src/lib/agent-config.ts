@@ -74,7 +74,11 @@ ${prompt
 
 export function buildEnv(c: AgentConfig) {
   const lines = [
-    `AI_API_KEY=${c.credentials.aiApiKey}`,
+    "# Preencha no servidor. A chave nunca é embutida por esta página.",
+    `AI_PROVIDER=${c.ai.provider}`,
+    `AI_MODEL=${c.ai.model}`,
+    "GEMINI_API_KEY=",
+    "",
     `WHATSAPP_PROVIDER=${c.whatsapp.provider}`,
   ];
   if (c.whatsapp.provider === "meta") {

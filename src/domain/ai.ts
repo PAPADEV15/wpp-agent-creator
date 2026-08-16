@@ -49,7 +49,7 @@ export type AIRequest = {
   maxOutputTokens?: number;
 };
 
-export type AIUsage = { inputTokens?: number; outputTokens?: number };
+export type AIUsage = { inputTokens?: number | undefined; outputTokens?: number | undefined };
 
 export const AI_ERROR_CODES = [
   "missing_api_key",
