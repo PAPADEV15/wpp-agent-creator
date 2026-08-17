@@ -11,11 +11,11 @@ export type AIProviderId = (typeof AI_PROVIDERS)[number]["id"];
 
 /** Modelos suportados por provedor. A UI nunca escreve o nome do modelo. */
 export const AI_MODELS: Record<AIProviderId, readonly string[]> = {
-  gemini: ["gemini-2.5-flash", "gemini-2.5-pro"],
+  gemini: ["gemini-3.5-flash", "gemini-3.7-flash", "gemini-pro-latest"],
 };
 
 export const DEFAULT_AI_MODEL: Record<AIProviderId, string> = {
-  gemini: "gemini-2.5-flash",
+  gemini: "gemini-3.5-flash",
 };
 
 export const aiConfigSchema = z
