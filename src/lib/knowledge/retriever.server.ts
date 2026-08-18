@@ -28,7 +28,9 @@ function tokenize(text: string): string[] {
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
     .split(/[^a-z0-9]+/)
-    .filter((t) => t.length > 2 && !STOPWORDS.has(t));
+    .filter((t) => t.length > 2 && !STOPWORDS.has(t))
+    // Radical simples: aproxima variações ("funcionamento" ~ "funciona").
+    .map((t) => t.slice(0, 6));
 }
 
 type Index = { chunks: KnowledgeChunk[]; tokens: Map<string, number>[]; df: Map<string, number> };
