@@ -40,7 +40,9 @@ export const agentPersonaSchema = z.object({
 });
 
 export const knowledgeSchema = z.object({
+  /** Conhecimento digitado manualmente (também vira um item da Knowledge Base). */
   content: z.string(),
+  documents: z.array(knowledgeDocumentSchema).default([]),
   fallback: z.string().trim().min(1),
 });
 
