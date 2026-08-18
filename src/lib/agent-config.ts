@@ -13,6 +13,17 @@ export const TONES = AGENT_TONES;
 
 const q = (s: string) => JSON.stringify(s || "");
 
+/** Texto completo da Knowledge Base (manual + documentos processados). */
+const knowledgeText = (c: AgentConfig) =>
+  [
+    c.knowledge.content.trim(),
+    ...c.knowledge.documents
+      .filter((d) => d.status === "ready")
+      .map((d) => `## ${d.name}\n${d.content}`),
+  ]
+    .filter(Boolean)
+    .join("\n\n");
+
 const goalsOf = (c: AgentConfig) =>
   c.persona.goals.length ? c.persona.goals : ["Responder perguntas frequentes"];
 
@@ -65,7 +76,7 @@ REGRAS
 - Se não souber, responda: "${c.knowledge.fallback}"
 
 BASE DE CONHECIMENTO
-${c.knowledge.content || "(adicione informações na pasta /knowledge)"}`;
+${knowledgeText(c) || "(adicione informações na pasta /knowledge)"}`;
 
   return `# config/prompts.yaml — gerado pelo AgentKit
 system_prompt: |

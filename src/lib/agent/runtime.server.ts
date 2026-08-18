@@ -12,6 +12,7 @@ import {
 } from "@/domain/runtime";
 import { createAIProvider, isAIProviderConfigured } from "@/lib/ai/index.server";
 import { loadAgentConfig } from "./agent-source.server";
+import { retrieveKnowledgeContext } from "./knowledge-context.server";
 import { buildConversation, buildSystemPrompt } from "./prompt-builder";
 
 const TIMEOUT_MS = 45_000;
@@ -58,11 +59,25 @@ export async function runAgent(rawInput: unknown): Promise<RunAgentResult> {
     throw new AgentRuntimeError("AI_PROVIDER_NOT_CONFIGURED");
   }
 
+  // Retrieval: falha aqui degrada o contexto, nunca derruba o runtime.
+  let knowledgeContext: string[] = [];
+  try {
+    knowledgeContext = await retrieveKnowledgeContext(input.agentId, config, input.message);
+  } catch (error) {
+    console.warn(
+      "[agent-runtime] knowledge",
+      JSON.stringify({
+        agentId: input.agentId,
+        error: error instanceof Error ? error.message : "RETRIEVAL_ERROR",
+      }),
+    );
+  }
+
   try {
     const provider = createAIProvider(providerId);
     const response = await withTimeout(
       provider.generateResponse({
-        system: buildSystemPrompt(config),
+        system: buildSystemPrompt(config, knowledgeContext),
         messages: buildConversation(input.history, input.message),
         model: config.ai.model,
         ...(config.ai.temperature !== undefined ? { temperature: config.ai.temperature } : {}),
@@ -78,6 +93,7 @@ export async function runAgent(rawInput: unknown): Promise<RunAgentResult> {
       provider: providerId,
       model: response.model,
       latencyMs: Date.now() - startedAt,
+      knowledgeChunks: knowledgeContext.length,
       status: "ok",
     });
 
@@ -113,6 +129,7 @@ function logRun(entry: {
   provider: string;
   model: string;
   latencyMs: number;
+  knowledgeChunks?: number;
   status: "ok" | "error";
   error?: string;
 }) {
