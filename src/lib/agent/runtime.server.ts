@@ -58,11 +58,25 @@ export async function runAgent(rawInput: unknown): Promise<RunAgentResult> {
     throw new AgentRuntimeError("AI_PROVIDER_NOT_CONFIGURED");
   }
 
+  // Retrieval: falha aqui degrada o contexto, nunca derruba o runtime.
+  let knowledgeContext: string[] = [];
+  try {
+    knowledgeContext = await retrieveKnowledgeContext(input.agentId, config, input.message);
+  } catch (error) {
+    console.warn(
+      "[agent-runtime] knowledge",
+      JSON.stringify({
+        agentId: input.agentId,
+        error: error instanceof Error ? error.message : "RETRIEVAL_ERROR",
+      }),
+    );
+  }
+
   try {
     const provider = createAIProvider(providerId);
     const response = await withTimeout(
       provider.generateResponse({
-        system: buildSystemPrompt(config),
+        system: buildSystemPrompt(config, knowledgeContext),
         messages: buildConversation(input.history, input.message),
         model: config.ai.model,
         ...(config.ai.temperature !== undefined ? { temperature: config.ai.temperature } : {}),
