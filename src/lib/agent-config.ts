@@ -13,6 +13,17 @@ export const TONES = AGENT_TONES;
 
 const q = (s: string) => JSON.stringify(s || "");
 
+/** Texto completo da Knowledge Base (manual + documentos processados). */
+const knowledgeText = (c: AgentConfig) =>
+  [
+    c.knowledge.content.trim(),
+    ...c.knowledge.documents
+      .filter((d) => d.status === "ready")
+      .map((d) => `## ${d.name}\n${d.content}`),
+  ]
+    .filter(Boolean)
+    .join("\n\n");
+
 const goalsOf = (c: AgentConfig) =>
   c.persona.goals.length ? c.persona.goals : ["Responder perguntas frequentes"];
 
