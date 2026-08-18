@@ -6,6 +6,7 @@
 import { z } from "zod";
 
 import { aiConfigSchema, defaultAIConfig } from "./ai";
+import { knowledgeDocumentSchema } from "./knowledge";
 
 export const WHATSAPP_PROVIDERS = ["twilio", "meta"] as const;
 export type WhatsAppProvider = (typeof WHATSAPP_PROVIDERS)[number];
@@ -96,6 +97,7 @@ export const emptyAgentConfig: AgentConfig = {
   persona: { name: "", tone: "amigavel", goals: [] },
   knowledge: {
     content: "",
+    documents: [],
     fallback:
       "Não tenho essa informação agora, vou te conectar com alguém do time.",
   },
