@@ -10,7 +10,7 @@ function toneLabel(config: AgentConfig): string {
   return AGENT_TONES.find((t) => t.id === config.persona.tone)?.label ?? config.persona.tone;
 }
 
-export function buildSystemPrompt(config: AgentConfig): string {
+export function buildSystemPrompt(config: AgentConfig, knowledgeContext: string[] = []): string {
   const goals = config.persona.goals.length
     ? config.persona.goals
     : ["Responder perguntas frequentes"];
