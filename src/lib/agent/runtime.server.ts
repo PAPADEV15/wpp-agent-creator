@@ -93,6 +93,7 @@ export async function runAgent(rawInput: unknown): Promise<RunAgentResult> {
       provider: providerId,
       model: response.model,
       latencyMs: Date.now() - startedAt,
+      knowledgeChunks: knowledgeContext.length,
       status: "ok",
     });
 
@@ -128,6 +129,7 @@ function logRun(entry: {
   provider: string;
   model: string;
   latencyMs: number;
+  knowledgeChunks?: number;
   status: "ok" | "error";
   error?: string;
 }) {
