@@ -165,7 +165,7 @@ export function KnowledgeManager({
               <div className="min-w-0 flex-1">
                 <p className="truncate text-sm">{d.name}</p>
                 <p className="truncate text-xs text-muted-foreground">
-                  {d.type.toUpperCase()} • {formatSize(d.size)} •{" "}
+                  {(d.status === "error" ? (d.name.split(".").pop() ?? d.type) : d.type).toUpperCase()} • {formatSize(d.size)} •{" "}
                   {new Date(d.createdAt).toLocaleDateString("pt-BR")}
                   {d.status === "error" && d.error ? ` • ${d.error}` : ""}
                 </p>
