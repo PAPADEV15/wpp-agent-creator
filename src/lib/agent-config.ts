@@ -65,7 +65,7 @@ REGRAS
 - Se não souber, responda: "${c.knowledge.fallback}"
 
 BASE DE CONHECIMENTO
-${c.knowledge.content || "(adicione informações na pasta /knowledge)"}`;
+${knowledgeText(c) || "(adicione informações na pasta /knowledge)"}`;
 
   return `# config/prompts.yaml — gerado pelo AgentKit
 system_prompt: |
