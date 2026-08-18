@@ -312,7 +312,7 @@ export function AgentWizard() {
               <KnowledgeManager
                 agentId={agent.id}
                 documents={c.knowledge.documents}
-                onChange={(documents) => set("knowledge", { documents })}
+                onChange={(documents: KnowledgeDocument[]) => set("knowledge", { documents })}
               />
               <Field
                 label="Informações adicionais"
