@@ -12,6 +12,7 @@ import {
 } from "@/domain/runtime";
 import { createAIProvider, isAIProviderConfigured } from "@/lib/ai/index.server";
 import { loadAgentConfig } from "./agent-source.server";
+import { retrieveKnowledgeContext } from "./knowledge-context.server";
 import { buildConversation, buildSystemPrompt } from "./prompt-builder";
 
 const TIMEOUT_MS = 45_000;
