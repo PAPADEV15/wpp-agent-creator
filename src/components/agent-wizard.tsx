@@ -307,9 +307,14 @@ export function AgentWizard() {
           {step === 2 && (
             <div className="space-y-6">
               <h2 className="text-xl font-semibold">O que o agente sabe</h2>
+              <KnowledgeManager
+                agentId={agent.id}
+                documents={c.knowledge.documents}
+                onChange={(documents) => set("knowledge", { documents })}
+              />
               <Field
-                label="Base de conhecimento"
-                hint="Cardápio, preços, endereço, políticas, perguntas frequentes. O agente só responde com o que estiver aqui."
+                label="Informações adicionais"
+                hint="Cardápio, preços, endereço, políticas, perguntas frequentes escritas manualmente."
                 htmlFor="kb"
               >
                 <Textarea
