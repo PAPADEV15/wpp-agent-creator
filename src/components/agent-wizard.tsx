@@ -28,6 +28,8 @@ import {
 import { AI_PROVIDERS, DEFAULT_AI_MODEL } from "@/domain/ai";
 import { getAIProviderStatus } from "@/lib/ai.functions";
 import { AgentTestChat } from "@/components/agent-test-chat";
+import { KnowledgeManager } from "@/components/knowledge-manager";
+import type { KnowledgeDocument } from "@/domain/knowledge";
 import {
   createDraftAgent,
   updateAgentConfig,
